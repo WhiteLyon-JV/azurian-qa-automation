@@ -4,6 +4,54 @@ Proyecto de pruebas automatizadas desarrollado por [Javier Vieytes](https://gith
 
 La suite contiene **53 escenarios: 15 de API y 38 de interfaz web (UI)**. En la última ejecución, realizada el **27 de octubre de 2026**, aprobaron los 53 escenarios y los 352 pasos informados por Cucumber.
 
+## Ejecución rápida: pruebas y reporte
+
+Esta es la secuencia para obtener el reporte teniendo **el laboratorio y la suite descargados**, Git Bash, Node.js 22, Java 17 y Docker Desktop abierto. El laboratorio requiere acceso autorizado al repositorio privado de Azurian. Si todavía no descargaste los proyectos o te falta alguna herramienta, comienza en el [paso 1 de instalación](#1-preparar-el-equipo).
+
+Los comandos siguientes utilizan el puerto **3000**. Si tu laboratorio usa otro puerto, configura primero la URL como se explica en [la alternativa del puerto 3100](#si-el-puerto-3000-no-está-disponible).
+
+### A. Iniciar el laboratorio — terminal 1
+
+Abre Git Bash **dentro de la carpeta `azurian-qa-evaluation`** y ejecuta:
+
+```bash
+docker compose up -d
+```
+
+Si lo utilizas en el puerto 3100, usa `APP_PORT=3100 docker compose up -d`. Mantén Docker Desktop abierto durante las pruebas.
+
+### B. Primera ejecución de la suite — terminal 2
+
+Abre otra terminal de Git Bash **dentro de la carpeta `azurian-qa-automation`**. Ejecuta estas líneas en orden, una a la vez:
+
+```bash
+curl -f -i http://localhost:3000/api/health
+npm install
+npm run browsers:install
+npm run typecheck
+npm run results:prepare
+npm test
+npm run report:generate
+npm run report:open
+```
+
+El healthcheck debe responder `200 OK` y `{"status":"ok"}` antes de continuar. Si Docker todavía está iniciando la aplicación, espera a que esté disponible y repite ese comando. Para el puerto 3100, utiliza `http://localhost:3100/api/health`. Si una instalación o la comprobación de TypeScript falla, corrige ese error antes de ejecutar las pruebas.
+
+El resultado esperado es **53 escenarios y 352 pasos aprobados**, seguido del reporte de Allure en el navegador. Si alguna prueba falla, genera y abre igualmente el reporte para consultar sus evidencias. Mantén abierta la terminal 2 mientras lees el reporte; **Ctrl+C** cierra su servidor.
+
+### C. Siguientes ejecuciones: sólo pruebas y reporte
+
+Con el laboratorio funcionando y las dependencias ya instaladas, desde `azurian-qa-automation` basta con esta secuencia:
+
+```bash
+npm run results:prepare
+npm test
+npm run report:generate
+npm run report:open
+```
+
+`results:prepare` va **antes** de `npm test`: archiva los resultados anteriores para que el reporte corresponda a la nueva ejecución. Para ejecutar con dos procesos, sustituye `npm test` por `npm run test:parallel`.
+
 ## Antes de empezar: hay dos proyectos
 
 Para ejecutar estas pruebas se necesitan dos carpetas:
