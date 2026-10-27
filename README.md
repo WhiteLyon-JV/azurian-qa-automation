@@ -1,12 +1,12 @@
 # Azurian QA Automation
 
-Automatización del ciclo de vida de documentos tributarios del laboratorio Azurian, mediante UI y API.
+Suite de pruebas automatizadas desarrollada por [Javier Vieytes](https://github.com/WhiteLyon-JV) para comprobar la gestión de documentos tributarios electrónicos en el laboratorio Azurian. Cubre creación, consulta, edición y eliminación tanto desde el portal como mediante la API, además de validaciones del formulario, autenticación y flujos híbridos.
 
-Stack: Playwright, TypeScript estricto, Cucumber/Gherkin, Allure, Page Object Model y clientes API tipados.
+La solución utiliza Playwright con TypeScript estricto y Cucumber/Gherkin. Las interacciones del portal se organizan en Page Objects; las peticiones HTTP, en clientes API tipados. Allure reúne las comparaciones entre resultados esperados y obtenidos, las respuestas de la API y las capturas del navegador.
 
-Ejecución completa verificada el 20 de octubre de 2026: **53 escenarios y 352 pasos aprobados**, con dos procesos en paralelo. La suite contiene **15 escenarios API y 38 UI**. El tiempo de ejecución depende del equipo y de la latencia del laboratorio.
+**Última ejecución verificada: 27 de octubre de 2026.** Se aprobaron **53 escenarios y 352 pasos**, con dos procesos en paralelo: **15 escenarios API y 38 UI**. El tiempo de ejecución depende del equipo y de la latencia del laboratorio.
 
-## Requisitos
+## Requisitos del entorno
 
 - Node.js 22 o 24, o una versión admitida de Node.js 26 o superior. El entorno se preparó con Node.js 22.20.0.
 - npm y Git.
@@ -42,11 +42,13 @@ APP_PORT=3100 docker compose up --build
 
 En ese caso, configurar `BASE_URL=http://localhost:3100` para las pruebas.
 
-## Instalar la solución
+## Instalar la suite
 
-Desde la raíz de este repositorio:
+En otra terminal, desde la carpeta donde se desee guardar el proyecto:
 
 ```bash
+git clone https://github.com/WhiteLyon-JV/azurian-qa-automation.git
+cd azurian-qa-automation
 npm install
 npm run browsers:install
 npm run typecheck
@@ -169,7 +171,7 @@ El reporte incluye comparaciones de esperado y recibido, respuestas API completa
 
 La configuración mantiene el resumen en consola y dirige el reportador de Allure a una salida separada. El archivo auxiliar `allure-formatter.log` puede quedar vacío; los resultados se guardan en `allure-results`.
 
-## Cobertura de la base obligatoria
+## Cobertura del CRUD
 
 | Capa | ID | Comprobaciones principales |
 | --- | --- | --- |
@@ -183,9 +185,9 @@ La configuración mantiene el resumen en consola y dirige el reportador de Allur
 | UI | `UI-CRUD-03` | Edición, aviso, fila actualizada y persistencia al recargar |
 | UI | `UI-CRUD-04` | Confirmación, aviso, desaparición, tabla vacía y ausencia al recargar |
 
-La base contiene 13 escenarios ejecutables: 7 de API y 6 de UI.
+El CRUD se comprueba mediante 13 escenarios ejecutables: 7 de API y 6 de UI. La creación se ejecuta con los tres tipos de DTE admitidos.
 
-## Cobertura adicional
+## Validaciones y escenarios complementarios
 
 | Capa | IDs | Casos | Comprobaciones |
 | --- | --- | ---: | --- |
@@ -200,7 +202,7 @@ La base contiene 13 escenarios ejecutables: 7 de API y 6 de UI.
 | UI | `UI-OBS-01` a `UI-OBS-05` | 5 | Observaciones vacías, 1, 299 y 300 caracteres, contador e impedimento de escribir un carácter adicional |
 | UI | `UI-EST-01` | 1 | Documento aceptado: fila exacta, editar/eliminar/enviar deshabilitados, detalle habilitado y persistencia del bloqueo al recargar |
 
-Son 40 escenarios adicionales, que junto a los 13 de la base completan los 53 escenarios ejecutables.
+Estas comprobaciones reúnen 40 escenarios. Junto con los 13 escenarios de CRUD, completan los 53 casos ejecutables de la suite.
 
 Los flujos híbridos preparan documentos por API y comprueban en UI el folio, RUT y monto inyectados. Se utilizan en lectura, edición, eliminación y protección del documento aceptado. El caso `@hibrido` permite ejecutar explícitamente este último flujo.
 
@@ -216,7 +218,7 @@ La ejecución con `npm run test:parallel` utiliza dos procesos de Cucumber. Cada
 
 Los límites de espera se centralizan en `src/config/timeouts.ts`: 15 segundos para peticiones API, acciones y expectativas UI; 30 segundos para navegación y para cada step de Cucumber. Todos los Page Objects y verificadores UI importan el `expect` configurado en `src/support/ui-expect.ts`. Estos límites son tiempos máximos de espera de condiciones observables, no pausas fijas. La lectura de evidencia de diagnóstico tiene un límite separado de 1 segundo.
 
-## Organización
+## Arquitectura del proyecto
 
 ```text
 features/
@@ -252,8 +254,10 @@ Los escenarios generan folios y RUT válidos, y preparan sus propios documentos.
 
 Los Page Objects utilizan roles, etiquetas y relaciones de tabla. La sincronización usa expectativas y eventos observables. No se alteran PostgreSQL, las latencias ni los datos semilla del laboratorio.
 
-## Entrega
+## Contenido del repositorio
 
-Publicar la solución con sus fuentes, archivos `.feature`, `package.json`, `package-lock.json`, configuración y este README. `.gitignore` excluye dependencias, reportes y resultados generados, archivos de entorno y trabajo temporal.
+Este repositorio contiene los escenarios Gherkin, las definiciones de pasos, los Page Objects, los clientes API, los generadores de datos y los verificadores que componen la suite. También incluye la configuración de TypeScript y Cucumber, el archivo de versiones de dependencias y los scripts de ejecución y reportes.
 
-El enlace del repositorio público debe enviarse por el canal indicado en la convocatoria. La publicación y el envío no se realizan mediante los scripts de pruebas.
+El portal Azurian se ejecuta por separado a partir del repositorio del laboratorio indicado en la sección de entorno. Para reproducir los resultados se necesita ese laboratorio en funcionamiento y ejecutar los comandos de instalación, pruebas y Allure descritos en este documento.
+
+Las dependencias instaladas, los resultados, los reportes HTML y los archivos temporales se generan localmente y quedan excluidos mediante `.gitignore`.
