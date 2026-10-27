@@ -1,0 +1,14 @@
+node_modules/
+allure-results*/
+allure-report*/
+allure-formatter.log
+test-results/
+playwright-report/
+work/
+.env
+.env.*
+!.env.example
+*.log
+*.tsbuildinfo
+.DS_Store
+Thumbs.db
