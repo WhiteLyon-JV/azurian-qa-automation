@@ -1,52 +1,93 @@
 # Azurian QA Automation
 
-Suite de pruebas automatizadas desarrollada por [Javier Vieytes](https://github.com/WhiteLyon-JV) para comprobar la gestión de documentos tributarios electrónicos en el laboratorio Azurian. Cubre creación, consulta, edición y eliminación tanto desde el portal como mediante la API, además de validaciones del formulario, autenticación y flujos híbridos.
+Proyecto de pruebas automatizadas desarrollado por [Javier Vieytes](https://github.com/WhiteLyon-JV) para comprobar la creación, consulta, edición y eliminación de documentos tributarios en el portal Azurian.
 
-La solución utiliza Playwright con TypeScript estricto y Cucumber/Gherkin. Las interacciones del portal se organizan en Page Objects; las peticiones HTTP, en clientes API tipados. Allure reúne las comparaciones entre resultados esperados y obtenidos, las respuestas de la API y las capturas del navegador.
+La suite contiene **53 escenarios: 15 de API y 38 de interfaz web (UI)**. En la última ejecución, realizada el **27 de octubre de 2026**, aprobaron los 53 escenarios y los 352 pasos informados por Cucumber.
 
-**Última ejecución verificada: 27 de octubre de 2026.** Se aprobaron **53 escenarios y 352 pasos**, con dos procesos en paralelo: **15 escenarios API y 38 UI**. El tiempo de ejecución depende del equipo y de la latencia del laboratorio.
+## Antes de empezar: hay dos proyectos
 
-## Requisitos del entorno
+Para ejecutar estas pruebas se necesitan dos carpetas:
 
-- Node.js 22 o 24, o una versión admitida de Node.js 26 o superior. El entorno se preparó con Node.js 22.20.0.
-- npm y Git.
-- Docker Desktop con Docker Compose para ejecutar el laboratorio.
-- Java 17 disponible en el PATH para generar y abrir Allure Report 2.
-- Acceso al repositorio privado del laboratorio. Esta solución no incluye el código del laboratorio.
+| Carpeta | Qué contiene | Para qué se usa |
+| --- | --- | --- |
+| `azurian-qa-evaluation` | La aplicación de laboratorio proporcionada por Azurian | Iniciar el portal que vamos a probar |
+| `azurian-qa-automation` | La suite de pruebas de este repositorio | Ejecutar las pruebas y generar el reporte |
 
-## Levantar el laboratorio
+**El laboratorio pertenece a un repositorio privado de Bitbucket.** Se necesita una cuenta con acceso autorizado para descargarlo. Tener acceso a este GitHub público permite descargar las pruebas, pero no concede acceso al laboratorio. Si la descarga de Bitbucket falla por permisos, se debe solicitar acceso al responsable del laboratorio.
 
-Desde una carpeta distinta a la de esta solución:
+Esta guía explica la **primera instalación desde cero**. Si ya tienes las dos carpetas instaladas, consulta [cómo volver a ejecutar las pruebas](#volver-a-ejecutar-las-pruebas-otro-día).
+
+Los comandos están escritos para **Git Bash en Windows**. Copia solamente el contenido de los bloques, sin agregar el símbolo `$` del terminal.
+
+## 1. Preparar el equipo
+
+Se necesita:
+
+- **Git y Git Bash**, para descargar los proyectos y ejecutar estos comandos.
+- **Node.js 22 con npm**. La suite se verificó con Node.js 22.20.0.
+- **Docker Desktop**, abierto y con el motor de contenedores en funcionamiento.
+- **Java 17**, para generar y abrir los reportes de Allure.
+- Acceso al repositorio privado del laboratorio, mencionado arriba.
+
+Comprueba las instalaciones desde Git Bash:
 
 ```bash
-git clone --branch feature/evaluation-qa-auto --single-branch https://bitbucket.org/jiraazurian/com-azurian-qa-evaluacion.git azurian-qa-evaluation
+git --version
+node --version
+npm --version
+docker version
+docker compose version
+java -version
+```
+
+Cada comando debe mostrar su versión; comprueba que Node.js sea de la versión 22 y Java de la versión 17. En `docker version` deben aparecer las secciones `Client` y `Server`; si falta el servidor, abre Docker Desktop y espera a que termine de iniciar. Si un comando indica `command not found`, instala esa herramienta y vuelve a abrir Git Bash.
+
+## 2. Iniciar la aplicación de Azurian — terminal 1
+
+Abre una terminal de Git Bash. Crea una carpeta para guardar ambos proyectos:
+
+```bash
+mkdir -p ~/Documents/azurian
+cd ~/Documents/azurian
+```
+
+Descarga el laboratorio y entra en su carpeta:
+
+```bash
+git clone \
+  --branch feature/evaluation-qa-auto \
+  --single-branch \
+  https://bitbucket.org/jiraazurian/com-azurian-qa-evaluacion.git \
+  azurian-qa-evaluation
 cd azurian-qa-evaluation
+```
+
+La barra `\` al final de cada línea permite escribir el mismo comando en varias líneas de Git Bash. La rama seleccionada es la que contiene la aplicación y su archivo `compose.yaml`.
+
+Inicia la aplicación:
+
+```bash
 docker compose up --build
 ```
 
-La rama indicada contiene `compose.yaml`. Mantener el laboratorio funcionando durante las pruebas.
+La primera ejecución puede tardar mientras Docker prepara la aplicación. **Deja esta terminal abierta y el laboratorio funcionando** durante las pruebas. Los comandos siguientes se ejecutan en una segunda terminal.
 
-Comprobar en otra terminal:
+Si aparece un error porque el puerto 3000 está ocupado o reservado, consulta [cómo usar el puerto 3100](#si-el-puerto-3000-no-está-disponible).
+
+## 3. Descargar e instalar las pruebas — terminal 2
+
+Abre **otra terminal de Git Bash**. Primero comprueba que la aplicación está disponible:
 
 ```bash
 curl -i http://localhost:3000/api/health
 ```
 
-Debe responder `200` con `{"status":"ok"}`. El portal se encuentra en `http://localhost:3000/login`.
+El resultado esperado es `HTTP/1.1 200 OK` y el cuerpo `{"status":"ok"}`. También puedes abrir [el login del portal](http://localhost:3000/login) en el navegador. Si no responde, revisa la terminal 1 antes de continuar.
 
-Si Windows impide publicar el puerto 3000, ejecutar desde Git Bash en la carpeta del laboratorio:
-
-```bash
-APP_PORT=3100 docker compose up --build
-```
-
-En ese caso, configurar `BASE_URL=http://localhost:3100` para las pruebas.
-
-## Instalar la suite
-
-En otra terminal, desde la carpeta donde se desee guardar el proyecto:
+Desde esta segunda terminal, descarga las pruebas en la misma carpeta de trabajo:
 
 ```bash
+cd ~/Documents/azurian
 git clone https://github.com/WhiteLyon-JV/azurian-qa-automation.git
 cd azurian-qa-automation
 npm install
@@ -54,122 +95,183 @@ npm run browsers:install
 npm run typecheck
 ```
 
-El navegador utilizado es Chromium. Se conserva `package-lock.json` en el repositorio; `npm ci` permite reinstalar exactamente sus versiones.
+- `npm install` instala las dependencias del proyecto.
+- `browsers:install` descarga Chromium, el navegador que utilizarán las pruebas.
+- `typecheck` comprueba el código TypeScript. Debe terminar sin errores.
 
-TypeScript está fijado en 5.9.3 para mantener compatibilidad con ts-node 10.9.2.
+Las carpetas quedan una al lado de la otra:
 
-## Configuración
+```text
+Documents/azurian/
+  azurian-qa-evaluation/    Aplicación de Azurian; terminal 1
+  azurian-qa-automation/    Pruebas automatizadas; terminal 2
+```
 
-Se centraliza en `src/config/environment.ts`. Los valores se leen de las variables del proceso; no se carga automáticamente un archivo `.env`.
+**Desde este punto, todos los comandos de npm se ejecutan en `azurian-qa-automation`, en la terminal 2.** Si guardaste los proyectos en otra ubicación, utiliza esas carpetas en lugar de las rutas de este ejemplo.
 
-| Variable | Valor por defecto | Uso |
-| --- | --- | --- |
-| `BASE_URL` | `http://localhost:3000` | URL del laboratorio |
-| `LAB_USERNAME` | `admin@azurian.com` | Usuario del laboratorio |
-| `LAB_PASSWORD` | `Azurian2026!` | Contraseña del laboratorio |
-| `HEADLESS` | `true` | Usar `false` para mostrar Chromium |
-| `ALLURE_RESULTS_DIR` | `allure-results` | Carpeta de resultados; se configura en `cucumber.cjs` |
+## 4. Ejecutar la suite completa — terminal 2
 
-Los ejemplos de asignación de variables de este README utilizan Git Bash en Windows.
+Prepara una carpeta de resultados nueva y ejecuta las pruebas:
 
 ```bash
-BASE_URL=http://localhost:3100 npm test
+npm run results:prepare
+npm test
+```
+
+La suite inicia sesión por sí misma y prepara sus datos. No es necesario iniciar sesión manualmente ni crear documentos antes de ejecutarla. Chromium trabaja sin mostrar una ventana de forma predeterminada.
+
+La ejecución puede tardar varios minutos. Al finalizar, el resultado esperado para esta versión es:
+
+```text
+53 scenarios (53 passed)
+352 steps (352 passed)
+```
+
+Si una prueba falla, conserva la salida y genera el reporte del paso siguiente para revisar el diagnóstico.
+
+**Ejecuta `results:prepare` antes de las pruebas.** Ese comando archiva los resultados anteriores; ejecutarlo después movería los resultados que acabas de obtener.
+
+## 5. Generar y abrir el reporte — terminal 2
+
+Cuando las pruebas hayan terminado, ejecuta:
+
+```bash
+npm run report:generate
+npm run report:open
+```
+
+Allure abrirá un reporte local en el navegador. Si no se abre automáticamente, copia en el navegador la dirección que muestre la terminal.
+
+En el reporte puedes consultar cada escenario, sus pasos, los resultados esperados y obtenidos, las respuestas de la API y las capturas. Deja abierta la terminal 2 mientras lo consultas. Al terminar, usa **Ctrl+C en la terminal 2** para cerrar el servidor del reporte.
+
+## Otras formas de ejecutar las pruebas
+
+Estos comandos también se ejecutan desde `azurian-qa-automation`. La aplicación debe seguir funcionando en la terminal 1.
+
+| Qué quieres ejecutar | Comando |
+| --- | --- |
+| Todas las pruebas | `npm test` |
+| Todas, con dos procesos en paralelo | `npm run test:parallel` |
+| Sólo API, sin abrir un navegador | `npm run test:api` |
+| Sólo interfaz web | `npm run test:ui` |
+| Casos relacionados con crear documentos | `npm run test:crear` |
+| Casos relacionados con leer documentos | `npm run test:leer` |
+| Casos relacionados con editar documentos | `npm run test:editar` |
+| Casos relacionados con eliminar documentos | `npm run test:eliminar` |
+| Comprobar TypeScript | `npm run typecheck` |
+
+Para ver la ventana del navegador mientras se ejecutan las pruebas de interfaz:
+
+```bash
 HEADLESS=false npm run test:ui
 ```
 
-En PowerShell, asignar las variables con `$env:BASE_URL = 'http://localhost:3100'` antes de ejecutar npm. A diferencia de las asignaciones en línea de Git Bash, las de PowerShell permanecen en esa sesión hasta cambiarlas o quitarlas.
-
-## Ejecución
+Para combinar etiquetas de Cucumber, por ejemplo API y edición:
 
 ```bash
-# Suite completa
-npm test
-
-# Suite completa con dos procesos en paralelo
-npm run test:parallel
-
-# Una capa
-npm run test:api
-npm run test:ui
-
-# Una operación en ambas capas
-npm run test:crear
-npm run test:leer
-npm run test:editar
-npm run test:eliminar
-
-# Combinación de tags
 npm test -- --tags "@api and @editar"
+```
 
-# Un escenario individual, incluido un ejemplo del esquema
+Para ejecutar un único escenario, utiliza su ID:
+
+```bash
 npm test -- --name "^API-CRUD-01-33 ·"
-
-# Comprobación de TypeScript
-npm run typecheck
 ```
 
-Cada escenario tiene un ID y un título único. Los ejemplos de creación se identifican por `33`, `34` y `39` en su ID.
+El símbolo `·` forma parte del título; copia el comando completo. Los IDs pueden consultarse en los archivos `.feature` de `features/api` y `features/ui`.
 
-Para ejecutar las comprobaciones adicionales:
+Para seleccionar validaciones concretas:
+
+| Grupo | Comando |
+| --- | --- |
+| Validaciones de datos en API | `npm test -- --tags "@api and @validaciones"` |
+| Errores de campos del formulario | `npm test -- --tags "@ui and @erroresFormulario"` |
+| Habilitación y limpieza del correo | `npm test -- --tags "@correoCondicional"` |
+| Correo obligatorio o con formato inválido | `npm test -- --tags "@correoValidacion"` |
+| Archivos adjuntos | `npm test -- --tags "@adjuntos"` |
+| Longitud de las observaciones | `npm test -- --tags "@observaciones"` |
+| Preparación por API y comprobación en pantalla | `npm test -- --tags "@hibrido"` |
+| Reutilización y renovación del token | `npm test -- --tags "@vigenciaToken"` |
+
+## Configuración y problemas frecuentes
+
+### Si el puerto 3000 no está disponible
+
+En la **terminal 1**, dentro de `azurian-qa-evaluation`, inicia el laboratorio en el puerto 3100:
 
 ```bash
-# Validaciones negativas de API
-npm test -- --tags "@api and @validaciones"
-
-# Errores asociados a campos del formulario
-npm test -- --tags "@ui and @erroresFormulario"
-
-# Habilitación y limpieza del correo de contacto
-npm test -- --tags "@correoCondicional"
-
-# Correo obligatorio y formato inválido
-npm test -- --tags "@correoValidacion"
-
-# Tipos de adjuntos y límite de tamaño
-npm test -- --tags "@adjuntos"
-
-# Límite y contador de observaciones
-npm test -- --tags "@observaciones"
-
-# Documento aceptado: preparación API y verificación UI
-npm test -- --tags "@hibrido"
-
-# Reutilización, renovación y concurrencia de la sesión
-npm test -- --tags "@vigenciaToken"
-
-# Un caso individual de renovación
-npm test -- --name "^API-AUTH-02 ·"
+APP_PORT=3100 docker compose up --build
 ```
 
-## Allure
-
-Para obtener un reporte de una ejecución nueva, ejecutar desde la raíz del proyecto:
+En la **terminal 2**, dentro de `azurian-qa-automation`, configura la URL de las pruebas y comprueba el servicio:
 
 ```bash
+export BASE_URL=http://localhost:3100
+curl -i http://localhost:3100/api/health
+```
+
+Después continúa con la instalación y ejecución de la suite. El login estará en `http://localhost:3100/login`. La variable `BASE_URL` permanece en esa terminal; si abres otra, debes configurarla de nuevo. Si ya usas otro puerto, aplica el mismo procedimiento con su número.
+
+### Variables disponibles
+
+Con el laboratorio en el puerto 3000 y las credenciales originales puedes seguir la guía sin cambiar nada. Los valores se centralizan en `src/config/environment.ts` y se leen de las variables de la terminal.
+
+| Variable | Valor por defecto | Qué permite cambiar |
+| --- | --- | --- |
+| `BASE_URL` | `http://localhost:3000` | Dirección de la aplicación |
+| `LAB_USERNAME` | `admin@azurian.com` | Usuario del laboratorio |
+| `LAB_PASSWORD` | `Azurian2026!` | Contraseña del laboratorio |
+| `HEADLESS` | `true` | Usar `false` para ver Chromium |
+| `ALLURE_RESULTS_DIR` | `allure-results` | Carpeta de resultados, leída en `cucumber.cjs` |
+
+La suite de automatización **no carga automáticamente un archivo `.env`**. Para cambiar un valor en Git Bash se puede usar `export`, como en el ejemplo del puerto 3100.
+
+Si utilizas PowerShell, la asignación equivalente es `$env:BASE_URL = 'http://localhost:3100'`. Los bloques de esta guía utilizan la sintaxis de Git Bash.
+
+### Volver a ejecutar las pruebas otro día
+
+No necesitas descargar los proyectos ni instalar de nuevo las dependencias cada vez. Abre Docker Desktop y usa dos terminales:
+
+**Terminal 1: iniciar el laboratorio**, usando la carpeta donde lo guardaste:
+
+```bash
+cd ~/Documents/azurian/azurian-qa-evaluation
+docker compose up -d
+```
+
+**Terminal 2: entrar en las pruebas**, comprobar la aplicación y repetir los pasos de ejecución y reporte:
+
+```bash
+cd ~/Documents/azurian/azurian-qa-automation
+curl -i http://localhost:3000/api/health
 npm run results:prepare
 npm test
 npm run report:generate
 npm run report:open
 ```
 
-Se puede sustituir `npm test` por `npm run test:parallel` en este procedimiento. Preparar resultados antes de ejecutar las pruebas; hacerlo después archivaría la ejecución que se desea reportar.
+Estas rutas corresponden a la primera instalación de esta guía. Si tus carpetas están directamente en `~/Documents` o en otro lugar, utiliza su ubicación real. Si usaste el puerto 3100, inicia el laboratorio en la terminal 1 con `APP_PORT=3100 docker compose up -d`. En la terminal 2 configura de nuevo `export BASE_URL=http://localhost:3100` y utiliza `http://localhost:3100/api/health` para comprobarlo.
 
-`results:prepare` mueve los resultados anteriores de `allure-results` a `work/allure-history/` y crea una carpeta nueva. No borra las evidencias anteriores. Se usa antes de la ejecución que se desea reportar.
+Para detener el laboratorio al terminar, ejecuta `docker compose down` dentro de `azurian-qa-evaluation`.
 
-`report:generate` reemplaza el HTML de `allure-report`, pero no limpia los resultados de las pruebas. `report:open` sirve el reporte localmente; mantener abierta esa terminal y detener el servidor con Ctrl+C al terminar.
+### Guardar un reporte de sólo API en otra carpeta
 
-Las pruebas fallidas también generan resultados. Si `npm test` informa un fallo, se pueden ejecutar los comandos de generación y apertura para analizarlo.
-
-Para reportar una ejecución guardada en otra carpeta:
+Este procedimiento es opcional; permite separar sus resultados del reporte completo:
 
 ```bash
-npx allure generate allure-results-token-lifetime --clean -o allure-report-token-lifetime
-npx allure open allure-report-token-lifetime
+ALLURE_RESULTS_DIR=allure-results-api npm run test:api
+npx allure generate allure-results-api --clean -o allure-report-api
+npx allure open allure-report-api
 ```
 
-El reporte incluye comparaciones de esperado y recibido, respuestas API completas y capturas de UI. Las respuestas API incluyen URL e identificadores de diagnóstico. Los fallos de UI adjuntan una captura antes de cerrar el navegador.
+Reutilizar la misma carpeta acumula resultados. Para un reporte completo de una sola ejecución, utiliza el procedimiento de los pasos 4 y 5 con `results:prepare`.
 
-La configuración mantiene el resumen en consola y dirige el reportador de Allure a una salida separada. El archivo auxiliar `allure-formatter.log` puede quedar vacío; los resultados se guardan en `allure-results`.
+## Información técnica de la solución
+
+La guía de ejecución termina arriba. Esta sección amplía la cobertura, la arquitectura y las decisiones de implementación.
+
+<details>
+<summary>Ver cobertura de escenarios y arquitectura</summary>
 
 ## Cobertura del CRUD
 
@@ -258,6 +360,12 @@ Los Page Objects utilizan roles, etiquetas y relaciones de tabla. La sincronizac
 
 Este repositorio contiene los escenarios Gherkin, las definiciones de pasos, los Page Objects, los clientes API, los generadores de datos y los verificadores que componen la suite. También incluye la configuración de TypeScript y Cucumber, el archivo de versiones de dependencias y los scripts de ejecución y reportes.
 
-El portal Azurian se ejecuta por separado a partir del repositorio del laboratorio indicado en la sección de entorno. Para reproducir los resultados se necesita ese laboratorio en funcionamiento y ejecutar los comandos de instalación, pruebas y Allure descritos en este documento.
+El portal Azurian se ejecuta por separado a partir del repositorio del laboratorio indicado en el paso 2. Para reproducir los resultados se necesita ese laboratorio en funcionamiento y ejecutar los comandos de instalación, pruebas y Allure descritos en este documento.
 
 Las dependencias instaladas, los resultados, los reportes HTML y los archivos temporales se generan localmente y quedan excluidos mediante `.gitignore`.
+
+El archivo `package-lock.json` conserva las versiones de las dependencias; `npm ci` permite reinstalarlas desde ese archivo. TypeScript está fijado en 5.9.3 para mantener compatibilidad con ts-node 10.9.2.
+
+`results:prepare` mueve los resultados anteriores a `work/allure-history`. `report:generate` reemplaza el HTML de `allure-report` y `report:open` lo sirve localmente. El archivo auxiliar `allure-formatter.log` puede quedar vacío: las evidencias se escriben en la carpeta de resultados configurada.
+
+</details>
